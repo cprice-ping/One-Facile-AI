@@ -1,2 +1,28 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.local
+
+# Build outputs
+dist/
+build/
+
+# MCP Server binaries
 bin/pingone-mcp-server
 bin/pingone-mcp-server.sha256
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swonode_modules/

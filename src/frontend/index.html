@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>PingOne Demo Builder - AI Assistant</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: #f5f5f5;
+    }
+    
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 1rem 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+    
+    header p {
+      font-size: 0.875rem;
+      opacity: 0.9;
+      margin-top: 0.25rem;
+    }
+    
+    #chatContainer {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      max-width: 900px;
+      width: 100%;
+      margin: 0 auto;
+      background: white;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .message {
+      display: flex;
+      gap: 0.75rem;
+      max-width: 85%;
+      animation: slideIn 0.2s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .message.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+    
+    .message-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      flex-shrink: 0;
+      font-size: 0.875rem;
+    }
+    
+    .message.user .message-avatar {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .message.assistant .message-avatar {
+      background: #f0f0f0;
+      color: #666;
+    }
+    
+    .message-content {
+      background: #f8f9fa;
+      padding: 0.75rem 1rem;
+      border-radius: 1rem;
+      line-height: 1.5;
+    }
+    
+    .message.user .message-content {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .tool-call {
+      margin: 0.5rem 0;
+      padding: 0.75rem;
+      background: #fff3cd;
+      border-left: 3px solid #ffc107;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+    }
+    
+    .tool-call-name {
+      font-weight: 600;
+      color: #856404;
+      margin-bottom: 0.25rem;
+    }
+    
+    .tool-call-args {
+      color: #856404;
+      opacity: 0.8;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 0.8125rem;
+    }
+    
+    .tool-result {
+      margin: 0.5rem 0;
+      padding: 0.75rem;
+      background: #d4edda;
+      border-left: 3px solid #28a745;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+    }
+    
+    .tool-result-name {
+      font-weight: 600;
+      color: #155724;
+      margin-bottom: 0.25rem;
+    }
+    
+    .tool-result-data {
+      color: #155724;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 0.8125rem;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .json-card {
+      background: white;
+      border: 1px solid #c3e6cb;
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+    }
+    
+    .json-card-title {
+      font-weight: 600;
+      color: #155724;
+      margin-bottom: 0.5rem;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    }
+    
+    .json-property {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 0.5rem;
+      padding: 0.25rem 0;
+      font-size: 0.875rem;
+    }
+    
+    .json-property-key {
+      font-weight: 500;
+      color: #155724;
+      opacity: 0.7;
+    }
+    
+    .json-property-value {
+      color: #155724;
+      word-break: break-word;
+    }
+    
+    .json-array-count {
+      color: #155724;
+      opacity: 0.6;
+      font-style: italic;
+      margin: 0.5rem 0;
+    }
+    
+    #inputContainer {
+      padding: 1.5rem;
+      background: white;
+      border-top: 1px solid #e0e0e0;
+    }
+    
+    #inputForm {
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-end;
+    }
+    
+    #messageInput {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 1.5rem;
+      font-size: 1rem;
+      font-family: inherit;
+      resize: none;
+      max-height: 120px;
+      transition: border-color 0.2s;
+    }
+    
+    #messageInput:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    #sendBtn {
+      padding: 0.75rem 1.5rem;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+    
+    #sendBtn:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+    
+    #sendBtn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+    
+    #sendBtn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .typing-indicator {
+      display: flex;
+      gap: 0.25rem;
+      padding: 0.75rem 1rem;
+    }
+    
+    .typing-indicator span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #999;
+      animation: typing 1.4s infinite;
+    }
+    
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+      30% { transform: translateY(-10px); opacity: 1; }
+    }
+    
+    .welcome {
+      text-align: center;
+      padding: 3rem 2rem;
+      color: #666;
+    }
+    
+    .welcome h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      color: #333;
+    }
+    
+    .welcome-examples {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: 2rem;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .example-prompt {
+      padding: 1rem;
+      background: #f8f9fa;
+      border: 2px solid #e0e0e0;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+    }
+    
+    .example-prompt:hover {
+      border-color: #667eea;
+      background: #f0f0ff;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎯 PingOne Demo Builder</h1>
+    <p>AI-powered assistant for building PingOne demos</p>
+  </header>
+  
+  <div id="chatContainer">
+    <div id="messages">
+      <div class="welcome">
+        <h2>Welcome! I'm your PingOne demo assistant.</h2>
+        <p>I can help you build and configure PingOne demo environments using natural language.</p>
+        <div class="welcome-examples">
+          <div class="example-prompt" onclick="useExample(this)">
+            💡 Create a new user named John Doe with email john@example.com
+          </div>
+          <div class="example-prompt" onclick="useExample(this)">
+            💡 List all applications in my environment
+          </div>
+          <div class="example-prompt" onclick="useExample(this)">
+            💡 Show me all active users in the system
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div id="inputContainer">
+      <form id="inputForm">
+        <textarea 
+          id="messageInput" 
+          placeholder="Ask me to help with your PingOne demo..."
+          rows="1"
+        ></textarea>
+        <button type="submit" id="sendBtn">Send</button>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    const ws = new WebSocket(`${location.origin.replace('http','ws')}/ws`);
+    const messagesDiv = document.getElementById('messages');
+    const inputForm = document.getElementById('inputForm');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    
+    let conversationHistory = [];
+    let currentAssistantMessage = null;
+    let isProcessing = false;
+    
+    // Auto-resize textarea
+    messageInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = (this.scrollHeight) + 'px';
+    });
+    
+    // Submit on Enter, newline on Shift+Enter
+    messageInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        inputForm.dispatchEvent(new Event('submit'));
+      }
+    });
+    
+    ws.onmessage = ev => {
+      const msg = JSON.parse(ev.data);
+      console.log('[WebSocket] Received:', msg.type, msg);
+      
+      if (msg.type === 'welcome') {
+        console.log('Connected. Session:', msg.sessionId);
+        if (msg.needsConfig) {
+          // Need to configure PingOne first
+          showPingOneConfigPrompt();
+        }
+      } else if (msg.type === 'configured') {
+        console.log('Connected. Session:', msg.sessionId);
+      } else if (msg.type === 'chatDelta') {
+        // Streaming text from assistant
+        if (!currentAssistantMessage) {
+          clearWelcome();
+          currentAssistantMessage = createAssistantMessage();
+        }
+        appendToMessage(currentAssistantMessage, msg.content);
+      } else if (msg.type === 'chatToolCall') {
+        // AI is calling a tool
+        if (!currentAssistantMessage) {
+          clearWelcome();
+          currentAssistantMessage = createAssistantMessage();
+        }
+        addToolCall(currentAssistantMessage, msg.toolName, msg.toolArgs);
+      } else if (msg.type === 'chatToolResult') {
+        // Tool execution completed
+        addToolResult(currentAssistantMessage, msg.toolName, msg.result);
+      } else if (msg.type === 'chatDone') {
+        // Conversation turn complete
+        if (currentAssistantMessage) {
+          const content = currentAssistantMessage.querySelector('.message-content').textContent.trim();
+          conversationHistory.push({ role: 'assistant', content });
+          currentAssistantMessage = null;
+        }
+        isProcessing = false;
+        sendBtn.disabled = false;
+        removeTypingIndicator();
+      } else if (msg.type === 'error') {
+        showError(msg.error);
+        isProcessing = false;
+        sendBtn.disabled = false;
+        removeTypingIndicator();
+      } else if (msg.type === 'prompt') {
+        handlePrompt(msg);
+      }
+    };
+    
+    inputForm.onsubmit = (e) => {
+      e.preventDefault();
+      const message = messageInput.value.trim();
+      if (!message || isProcessing) return;
+      
+      sendMessage(message);
+      messageInput.value = '';
+      messageInput.style.height = 'auto';
+    };
+    
+    function sendMessage(text) {
+      clearWelcome();
+      
+      // Add user message to UI
+      addUserMessage(text);
+      conversationHistory.push({ role: 'user', content: text });
+      
+      // Show typing indicator
+      showTypingIndicator();
+      
+      // Send to backend
+      isProcessing = true;
+      sendBtn.disabled = true;
+      
+      ws.send(JSON.stringify({
+        type: 'chat',
+        messages: conversationHistory
+      }));
+    }
+    
+    function clearWelcome() {
+      const welcome = messagesDiv.querySelector('.welcome');
+      if (welcome) welcome.remove();
+    }
+    
+    function addUserMessage(text) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'message user';
+      msgDiv.innerHTML = `
+        <div class="message-avatar">SE</div>
+        <div class="message-content">${escapeHtml(text)}</div>
+      `;
+      messagesDiv.appendChild(msgDiv);
+      scrollToBottom();
+    }
+    
+    function createAssistantMessage() {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'message assistant';
+      msgDiv.innerHTML = `
+        <div class="message-avatar">AI</div>
+        <div class="message-content"></div>
+      `;
+      messagesDiv.appendChild(msgDiv);
+      scrollToBottom();
+      return msgDiv;
+    }
+    
+    function appendToMessage(msgDiv, text) {
+      const content = msgDiv.querySelector('.message-content');
+      
+      // Don't use textContent as it destroys child elements (like formatted cards)
+      // Instead, find or create a text node to append to
+      let textNode = content.querySelector('.assistant-text');
+      if (!textNode) {
+        textNode = document.createElement('div');
+        textNode.className = 'assistant-text';
+        content.appendChild(textNode);
+      }
+      textNode.textContent += text;
+      scrollToBottom();
+    }
+    
+    function addToolCall(msgDiv, toolName, args) {
+      const content = msgDiv.querySelector('.message-content');
+      const toolDiv = document.createElement('div');
+      toolDiv.className = 'tool-call';
+      toolDiv.innerHTML = `
+        <div class="tool-call-name">🔧 ${toolName}</div>
+        <div class="tool-call-args">${escapeHtml(JSON.stringify(args, null, 2))}</div>
+      `;
+      content.appendChild(toolDiv);
+      scrollToBottom();
+    }
+    
+    function addToolResult(msgDiv, toolName, result) {
+      const content = msgDiv.querySelector('.message-content');
+      const resultDiv = document.createElement('div');
+      resultDiv.className = 'tool-result';
+      
+      const titleDiv = document.createElement('div');
+      titleDiv.className = 'tool-result-name';
+      titleDiv.textContent = `✅ ${toolName} result`;
+      resultDiv.appendChild(titleDiv);
+      
+      const dataDiv = document.createElement('div');
+      dataDiv.className = 'tool-result-data';
+      
+      console.log('[Tool Result]', toolName, result);
+      
+      // Try to parse and format result
+      let parsed = result;
+      if (typeof result === 'string') {
+        try {
+          parsed = JSON.parse(result);
+        } catch (e) {
+          // Not JSON, display as text
+          dataDiv.textContent = result;
+          resultDiv.appendChild(dataDiv);
+          content.appendChild(resultDiv);
+          scrollToBottom();
+          return;
+        }
+      }
+      
+      // Format JSON result nicely
+      if (parsed && typeof parsed === 'object') {
+        // MCP tool result format: { content: [{ type: 'text', text: '...' }] }
+        if (parsed.content && Array.isArray(parsed.content)) {
+          parsed.content.forEach(item => {
+            if (item.type === 'text' && item.text) {
+              try {
+                // Try to parse the text as JSON
+                const data = JSON.parse(item.text);
+                dataDiv.appendChild(formatJsonData(data));
+              } catch (e) {
+                // Not JSON, display as plain text
+                const pre = document.createElement('pre');
+                pre.style.cssText = 'white-space: pre-wrap; word-wrap: break-word; margin: 0;';
+                pre.textContent = item.text;
+                dataDiv.appendChild(pre);
+              }
+            } else {
+              // Other content types (images, etc.)
+              dataDiv.textContent = JSON.stringify(item, null, 2);
+            }
+          });
+        } else {
+          // Not MCP format, display as-is
+          dataDiv.appendChild(formatJsonData(parsed));
+        }
+      } else {
+        dataDiv.textContent = String(parsed);
+      }
+      
+      resultDiv.appendChild(dataDiv);
+      content.appendChild(resultDiv);
+      scrollToBottom();
+    }
+    
+    function formatJsonData(data) {
+      const container = document.createElement('div');
+      
+      // Unwrap common API response patterns like { environments: [...] }
+      let arrayData = null;
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        // Check for common wrapper keys
+        const wrapperKeys = ['environments', 'users', 'applications', 'groups', 'items', 'data', 'results'];
+        for (const key of wrapperKeys) {
+          if (Array.isArray(data[key])) {
+            arrayData = data[key];
+            break;
+          }
+        }
+      } else if (Array.isArray(data)) {
+        arrayData = data;
+      }
+      
+      // Display array of objects as cards
+      if (arrayData) {
+        const countDiv = document.createElement('div');
+        countDiv.className = 'json-array-count';
+        countDiv.textContent = `Found ${arrayData.length} item${arrayData.length !== 1 ? 's' : ''}`;
+        container.appendChild(countDiv);
+        
+        arrayData.forEach((item, index) => {
+          const card = document.createElement('div');
+          card.className = 'json-card';
+          
+          if (typeof item === 'object' && item !== null) {
+            // Pick most relevant fields to display (skip _links, _embedded, etc.)
+            const displayEntries = Object.entries(item).filter(([key]) => 
+              !key.startsWith('_') && key !== 'id'
+            );
+            
+            // Always show name/title first if present
+            const nameFields = ['name', 'title', 'displayName', 'username', 'email'];
+            const nameEntry = displayEntries.find(([key]) => nameFields.includes(key));
+            
+            if (nameEntry) {
+              const titleDiv = document.createElement('div');
+              titleDiv.className = 'json-card-title';
+              titleDiv.textContent = nameEntry[1];
+              card.appendChild(titleDiv);
+            }
+            
+            // Display other properties
+            displayEntries.forEach(([key, value]) => {
+              if (nameEntry && key === nameEntry[0]) return; // Skip name, already shown as title
+              
+              // Skip very large nested objects
+              if (typeof value === 'object' && value !== null) {
+                if (Array.isArray(value) && value.length > 3) return;
+                if (!Array.isArray(value) && Object.keys(value).length > 5) return;
+              }
+              
+              const prop = document.createElement('div');
+              prop.className = 'json-property';
+              
+              const keySpan = document.createElement('div');
+              keySpan.className = 'json-property-key';
+              keySpan.textContent = formatKey(key);
+              
+              const valueSpan = document.createElement('div');
+              valueSpan.className = 'json-property-value';
+              valueSpan.textContent = formatValue(value);
+              
+              prop.appendChild(keySpan);
+              prop.appendChild(valueSpan);
+              card.appendChild(prop);
+            });
+          } else {
+            card.textContent = String(item);
+          }
+          
+          container.appendChild(card);
+        });
+      } else if (typeof data === 'object' && data !== null) {
+        // Single object - display as a single card
+        const card = document.createElement('div');
+        card.className = 'json-card';
+        
+        Object.entries(data).forEach(([key, value]) => {
+          if (key.startsWith('_')) return; // Skip internal fields
+          
+          const prop = document.createElement('div');
+          prop.className = 'json-property';
+          
+          const keySpan = document.createElement('div');
+          keySpan.className = 'json-property-key';
+          keySpan.textContent = formatKey(key);
+          
+          const valueSpan = document.createElement('div');
+          valueSpan.className = 'json-property-value';
+          valueSpan.textContent = formatValue(value);
+          
+          prop.appendChild(keySpan);
+          prop.appendChild(valueSpan);
+          card.appendChild(prop);
+        });
+        
+        container.appendChild(card);
+      } else {
+        container.textContent = String(data);
+      }
+      
+      return container;
+    }
+    
+    function formatKey(key) {
+      // Convert camelCase/snake_case to Title Case
+      return key
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/_/g, ' ')
+        .replace(/^./, str => str.toUpperCase())
+        .trim();
+    }
+    
+    function formatValue(value) {
+      if (value === null || value === undefined) return '-';
+      if (typeof value === 'boolean') return value ? '✓' : '✗';
+      if (typeof value === 'object') {
+        // For nested objects/arrays, show JSON
+        return JSON.stringify(value, null, 2);
+      }
+      // Check if it's a URL
+      if (typeof value === 'string' && value.startsWith('http')) {
+        return value.replace(/^https?:\/\//, '');
+      }
+      return String(value);
+    }
+    
+    function showTypingIndicator() {
+      removeTypingIndicator();
+      const indicator = document.createElement('div');
+      indicator.className = 'message assistant';
+      indicator.id = 'typingIndicator';
+      indicator.innerHTML = `
+        <div class="message-avatar">AI</div>
+        <div class="message-content typing-indicator">
+          <span></span><span></span><span></span>
+        </div>
+      `;
+      messagesDiv.appendChild(indicator);
+      scrollToBottom();
+    }
+    
+    function removeTypingIndicator() {
+      const indicator = document.getElementById('typingIndicator');
+      if (indicator) indicator.remove();
+    }
+    
+    function showError(error) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'message assistant';
+      msgDiv.innerHTML = `
+        <div class="message-avatar">⚠️</div>
+        <div class="message-content" style="background: #f8d7da; color: #721c24;">
+          Error: ${escapeHtml(error)}
+        </div>
+      `;
+      messagesDiv.appendChild(msgDiv);
+      scrollToBottom();
+    }
+    
+    function handlePrompt(msg) {
+      console.log('[Prompt] Handling prompt:', msg);
+      // Same prompt handling as before
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
+      
+      const modal = document.createElement('div');
+      modal.style.cssText = 'background:white;padding:2rem;border-radius:8px;max-width:500px;width:90%;';
+      
+      const title = document.createElement('h2');
+      title.textContent = msg.params?.name || 'Server Request';
+      modal.appendChild(title);
+      
+      const description = document.createElement('p');
+      description.textContent = msg.params?.description || 'The server needs information from you:';
+      modal.appendChild(description);
+      
+      const form = document.createElement('form');
+      const args = msg.params?.arguments || [];
+      const inputs = {};
+      
+      args.forEach(arg => {
+        const label = document.createElement('label');
+        label.style.cssText = 'display:block;margin:1rem 0;';
+        label.innerHTML = `<strong>${arg.name}</strong>${arg.required ? ' *' : ''}<br/>${arg.description || ''}`;
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.name = arg.name;
+        input.required = arg.required || false;
+        input.style.cssText = 'width:100%;padding:0.5rem;margin-top:0.25rem;';
+        
+        inputs[arg.name] = input;
+        label.appendChild(input);
+        form.appendChild(label);
+      });
+      
+      const buttons = document.createElement('div');
+      buttons.style.cssText = 'display:flex;gap:0.5rem;margin-top:1.5rem;';
+      
+      const submitBtn = document.createElement('button');
+      submitBtn.type = 'submit';
+      submitBtn.textContent = 'Submit';
+      submitBtn.style.cssText = 'flex:1;padding:0.5rem;';
+      
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.style.cssText = 'flex:1;padding:0.5rem;';
+      
+      buttons.appendChild(submitBtn);
+      buttons.appendChild(cancelBtn);
+      form.appendChild(buttons);
+      
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        const response = {};
+        Object.entries(inputs).forEach(([name, input]) => {
+          response[name] = input.value;
+        });
+        
+        ws.send(JSON.stringify({
+          type: 'promptResponse',
+          id: msg.id,
+          response: { messages: [{ role: 'user', content: { type: 'text', text: JSON.stringify(response) } }] }
+        }));
+        
+        document.body.removeChild(overlay);
+      };
+      
+      cancelBtn.onclick = () => {
+        ws.send(JSON.stringify({
+          type: 'promptResponse',
+          id: msg.id,
+          response: { messages: [] }
+        }));
+        document.body.removeChild(overlay);
+      };
+      
+      modal.appendChild(form);
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+      
+      if (Object.keys(inputs).length > 0) {
+        Object.values(inputs)[0].focus();
+      }
+    }
+    
+    window.useExample = function(element) {
+      const text = element.textContent.replace('💡 ', '').trim();
+      messageInput.value = text;
+      messageInput.focus();
+    };
+    
+    function showPingOneConfigPrompt() {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:2000;';
+      
+      const modal = document.createElement('div');
+      modal.style.cssText = 'background:white;padding:2rem;border-radius:12px;max-width:500px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);';
+      
+      const title = document.createElement('h2');
+      title.textContent = '🔧 Configure PingOne Connection';
+      title.style.cssText = 'margin:0 0 0.5rem 0;color:#333;';
+      modal.appendChild(title);
+      
+      const description = document.createElement('p');
+      description.textContent = 'Enter your PingOne environment details to get started:';
+      description.style.cssText = 'color:#666;margin:0 0 1.5rem 0;';
+      modal.appendChild(description);
+      
+      const form = document.createElement('form');
+      
+      const fields = [
+        { id: 'environmentId', label: 'Environment ID', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', required: true },
+        { id: 'clientId', label: 'Client ID', placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx', required: true },
+        { id: 'region', label: 'Region Code', placeholder: 'NA', default: 'NA', required: true, helper: 'e.g., NA, EU, CA, AP, AU, SG' },
+        { id: 'topLevelDomain', label: 'Top Level Domain', placeholder: '.com', default: '.com', required: true, helper: 'e.g., .com, .eu, .ca, .asia, .com.au' }
+      ];
+      
+      const inputs = {};
+      fields.forEach(field => {
+        const fieldDiv = document.createElement('div');
+        fieldDiv.style.cssText = 'margin-bottom:1rem;';
+        
+        const label = document.createElement('label');
+        label.textContent = field.label + (field.required ? ' *' : '');
+        label.style.cssText = 'display:block;font-weight:600;margin-bottom:0.25rem;color:#333;';
+        fieldDiv.appendChild(label);
+        
+        if (field.helper) {
+          const helper = document.createElement('div');
+          helper.textContent = field.helper;
+          helper.style.cssText = 'font-size:0.75rem;color:#999;margin-bottom:0.25rem;';
+          fieldDiv.appendChild(helper);
+        }
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = field.id;
+        input.placeholder = field.placeholder;
+        input.value = field.default || '';
+        input.required = field.required;
+        input.style.cssText = 'width:100%;padding:0.75rem;border:2px solid #e0e0e0;border-radius:0.5rem;font-size:1rem;transition:border-color 0.2s;';
+        input.onfocus = () => input.style.borderColor = '#667eea';
+        input.onblur = () => input.style.borderColor = '#e0e0e0';
+        
+        inputs[field.id] = input;
+        fieldDiv.appendChild(input);
+        form.appendChild(fieldDiv);
+      });
+      
+      const buttons = document.createElement('div');
+      buttons.style.cssText = 'display:flex;gap:0.75rem;margin-top:1.5rem;';
+      
+      const submitBtn = document.createElement('button');
+      submitBtn.type = 'submit';
+      submitBtn.textContent = 'Connect';
+      submitBtn.style.cssText = 'flex:1;padding:0.75rem;background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);color:white;border:none;border-radius:0.5rem;font-weight:600;cursor:pointer;font-size:1rem;';
+      
+      buttons.appendChild(submitBtn);
+      form.appendChild(buttons);
+      
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        
+        const config = {
+          environmentId: inputs.environmentId.value.trim(),
+          clientId: inputs.clientId.value.trim(),
+          region: inputs.region.value.trim(),
+          topLevelDomain: inputs.topLevelDomain.value.trim()
+        };
+        
+        // Send configuration to server
+        ws.send(JSON.stringify({
+          type: 'configurePingOne',
+          config
+        }));
+        
+        // Show loading state
+        submitBtn.textContent = 'Connecting...';
+        submitBtn.disabled = true;
+        
+        // Remove modal after a delay (server will send 'configured' message)
+        setTimeout(() => {
+          document.body.removeChild(overlay);
+        }, 1000);
+      };
+      
+      modal.appendChild(form);
+      overlay.appendChild(modal);
+      document.body.appendChild(overlay);
+      
+      // Focus first input
+      inputs.environmentId.focus();
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function scrollToBottom() {
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+  </script>
+</body>
+</html>

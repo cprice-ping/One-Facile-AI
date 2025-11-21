@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-admin-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-admin-agent
+  template:
+    metadata:
+      labels:
+        app: mcp-admin-agent
+    spec:
+      containers:
+        - name: web
+          image: your-registry/mcp-admin-agent:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+            - name: MCP_SERVER_COMMAND
+              value: "/opt/pingone/pingone-mcp-server"
+            - name: PINGONE_MCP_ENVIRONMENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: pingone-admin
+                  key: environmentId
+                  optional: true
+            - name: PINGONE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: pingone-admin
+                  key: clientId
+                  optional: true
+            - name: PINGONE_TOP_LEVEL_DOMAIN
+              value: ".com"
+            - name: PINGONE_REGION_CODE
+              value: "NA"
+            - name: PINGONE_MCP_DEBUG
+              value: "false"
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: openai-api
+                  key: apiKey
+            - name: OPENAI_MODEL
+              value: "gpt-4o"
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: mcp-agent-session
+                  key: SESSION_SECRET
